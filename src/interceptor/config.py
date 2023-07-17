@@ -1,10 +1,11 @@
 # -*- coding=utf-8 -*-
 
 # Where to serve from
-HOST = 'localhost'
-PORT = 8000
+HOST: str = 'localhost'
+PORT: int = 8000
+# SSL_CERT: str
 
 # What to protect
-TARGET_HOST = 'localhost'
-TARGET_PORT = 8080
-TIMEOUT = 5
+TARGET_HOST: str = 'localhost'
+TARGET_PORT: int = 8080
+TIMEOUT: float = 5
