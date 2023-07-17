@@ -3,10 +3,6 @@
 r"""
 
 """
-try:
-    import ssl
-except ImportError:
-    ssl = None
 import logging
 import http.server
 import socketserver
@@ -34,9 +30,6 @@ def load_interceptors():
 def main():
     # server = http.server.HTTPServer(server_address=('localhost', port), RequestHandlerClass=InterceptorHandler)
     server = ThreadingHTTPServer(server_address=(config.HOST, config.PORT), RequestHandlerClass=InterceptorHandler)
-    if ssl and hasattr(config, 'SSL_CERT'):
-        server.socket = ssl.wrap_socket(server.socket, server_side=True, certfile=config.SSL_CERT, ssl_version=ssl.PROTOCOL_TLS)
-
     logging.info(f"THE INTERCEPTOR runs on {config.HOST}:{config.PORT} and protects {config.TARGET_HOST}:{config.TARGET_PORT}")
     try:
         server.serve_forever(poll_interval=None)
