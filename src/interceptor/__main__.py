@@ -16,6 +16,13 @@ class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     pass
 
 
+def configure_logging():
+    logging.basicConfig(
+        level=logging.INFO,
+        handlers=[logging.StreamHandler()],
+    )
+
+
 def load_interceptors():
     import os
     import importlib
@@ -42,5 +49,6 @@ def main():
 
 if __name__ == '__main__':
     import logo_printer  # noqa
+    configure_logging()
     load_interceptors()
     exit(main() or 0)
