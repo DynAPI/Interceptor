@@ -1,6 +1,7 @@
 # Custom
 .idea/
 src/interceptor/interceptors/
+src/interceptor/interceptor.conf
 
 
 # Byte-compiled / optimized / DLL files
