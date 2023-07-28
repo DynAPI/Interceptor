@@ -7,7 +7,7 @@ import logging
 import http.server
 import socketserver
 from interceptorhandler import InterceptorHandler
-import config
+from config import config
 
 
 # this is exactly the same that should be in http.server but isn't (in this version yet?)
@@ -35,15 +35,18 @@ def load_interceptors():
 
 
 def main():
+    HOST, PORT = config.get("interceptor", "host"), config.getint("interceptor", "port")
+    THOST, TPORT = config.get("target", "host"), config.getint("target", "port")
+
     # server = http.server.HTTPServer(server_address=('localhost', port), RequestHandlerClass=InterceptorHandler)
-    server = ThreadingHTTPServer(server_address=(config.HOST, config.PORT), RequestHandlerClass=InterceptorHandler)
-    logging.info(f"THE INTERCEPTOR runs on {config.HOST}:{config.PORT} and protects {config.TARGET_HOST}:{config.TARGET_PORT}")
+    server = ThreadingHTTPServer(server_address=(HOST, PORT), RequestHandlerClass=InterceptorHandler)
+    logging.info(f"THE INTERCEPTOR runs on {HOST}:{PORT} and protects {THOST}:{TPORT}")
     try:
         server.serve_forever(poll_interval=None)
     except KeyboardInterrupt:
         pass
-
-    server.server_close()
+    finally:
+        server.server_close()
     logging.info("Server stopped")
 
 

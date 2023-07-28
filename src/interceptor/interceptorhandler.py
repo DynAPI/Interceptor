@@ -3,20 +3,40 @@
 r"""
 
 """
+import logging
 import http.server
 import http.client
-import logging
+import traceback
 
 from config import config
 from classes import Request, Response
 import register
+from exceptions import HTTPException
+
+
+THOST, TPORT = config.get("target", "host"), config.getint("target", "port")
+TIMEOUT = config.getfloat("target", "timeout")
 
 
 class InterceptorHandler(http.server.BaseHTTPRequestHandler):
     def __getattr__(self, item: str):
         if item.startswith("do_"):
-            return self._handle_request
+            return self._handle_wrapper
         raise AttributeError(item)
+
+    def _handle_wrapper(self):
+        try:
+            self._handle_request()
+        except HTTPException as exc:
+            self._handle_exception(exc)
+        except Exception as exc:
+            traceback.print_exception(type(exc), exc, exc.__traceback__)
+            self._handle_exception(
+                HTTPException(
+                    status=500,
+                    message=f"{exc}"
+                )
+            )
 
     def _handle_request(self):
         logging.info(f"Handle Request from {self.client_address[0]}")
@@ -35,14 +55,18 @@ class InterceptorHandler(http.server.BaseHTTPRequestHandler):
         body = self.rfile.read(content_length) if content_length else None
         logging.debug("body:", body and body[:20])
 
-        req = Request(method=method, path=path, headers=headers, body=body)
+        req = Request(client=self.client_address[0], method=method, path=path, headers=headers, body=body)
 
         logging.info("running interceptors (before)")
         for interceptor in register.BEFORE:
-            interceptor(req)
+            early_response = interceptor(req)
+            if early_response is not None:
+                logging.info(f"Early Response from {interceptor.__name__}")
+                self._handle_response(early_response)
+                return
 
         logging.debug("Building Connection...")
-        connection = http.client.HTTPConnection(config.TARGET_HOST, config.TARGET_PORT, timeout=config.TIMEOUT)
+        connection = http.client.HTTPConnection(THOST, TPORT, timeout=TIMEOUT)
         logging.debug("Making Request")
         connection.request(
             method=method,
@@ -51,22 +75,31 @@ class InterceptorHandler(http.server.BaseHTTPRequestHandler):
             headers={k: v for k, v in headers.raw_items()}
         )
         logging.debug("Waiting for response...")
-        response = connection.getresponse()
+        response = Response.from_http_response(connection.getresponse())
 
         logging.info("running interceptors (after)")
         for interceptor in register.AFTER:
-            interceptor(req, response)
+            early_response = interceptor(req, response)
+            if early_response is not None:
+                logging.info(f"Early Response from {interceptor.__name__}")
+                self._handle_response(early_response)
+                return
 
+        self._handle_response(response)
+
+    def _handle_response(self, response: Response):
         logging.debug("sending response...")
         self.send_response_only(response.status)
         logging.debug("sending headers...")
-        for key, value in response.getheaders():
-            self.send_header(key, value)
+        for name, value in response.headers.raw_items():
+            self.send_header(name, value)
         self.end_headers()
         logging.debug("sending body...")
-        got = 0
-        while got < response.length:
-            chunk = response.read(1000)
-            got += len(chunk)
+        for chunk in response.body:
             self.wfile.write(chunk)
         logging.debug("request completed")
+
+    def _handle_exception(self, exc: HTTPException):
+        self._handle_response(
+            Response.from_http_exception(exc)
+        )
