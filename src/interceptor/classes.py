@@ -90,6 +90,7 @@ class Response:
             status=exc.status,
             headers={
                 "Content-Type": "application/json",
+                "Server": "Interceptor",
                 "X-Interceptor": "true",
             }
         )

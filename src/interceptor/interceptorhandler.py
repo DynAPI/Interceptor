@@ -87,6 +87,13 @@ class InterceptorHandler(http.server.BaseHTTPRequestHandler):
 
         self._handle_response(response)
 
+        for handler in register.TEARDOWN:
+            try:
+                handler(req, response)
+            except Exception as exc:
+                print(f"teardown handler '{handler.__name__}' failed")
+                traceback.print_exception(type(exc), exc, exc.__traceback__)
+
     def _handle_response(self, response: Response):
         logging.debug("sending response...")
         self.send_response_only(response.status)
