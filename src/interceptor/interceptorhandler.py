@@ -7,8 +7,8 @@ import http.server
 import http.client
 import logging
 
-import config
-from request_type import Request
+from config import config
+from classes import Request, Response
 import register
 
 

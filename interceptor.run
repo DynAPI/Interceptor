@@ -1,0 +1,5 @@
+#!/usr/bin/bash
+set -e
+THIS=$(dirname "$(realpath "$0")")
+cd "$THIS/src/interceptor/"
+"$THIS/.venv/bin/python3" -B -O __main__.py "$@"
