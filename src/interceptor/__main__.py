@@ -25,12 +25,10 @@ def configure_logging():
 
 def load_interceptors():
     import os
-    import sys
     import importlib
     path = os.path.abspath("interceptors")
     if not os.path.isdir(path):
         return
-    sys.path.append(path)
     for fn in os.listdir(path):
         mn, ext = os.path.splitext(fn)
         if ext != ".py":
