@@ -47,7 +47,7 @@ class Request:
             raise NotImplementedError(f"authorization parsing for {auth_scheme} is not supported")
         parts = [p.strip() for p in auth_params.split(",")]
         b64 = parts[0]
-        username, sep, password = base64.b64decode(b64).partition(":")
+        username, sep, password = base64.b64decode(b64).decode().partition(":")
         if sep is None:
             raise ValueError("Bad credentials")
         return Authorization(username=username, password=password)
@@ -56,7 +56,7 @@ class Request:
 class Response:
     def __init__(
             self,
-            body: t.Union[str, bytes, t.Callable[[], t.Union[str, bytes]]],
+            body: t.Union[str, bytes, t.Callable[[], t.Iterable[t.Union[str, bytes]]]],
             status: t.Union[int, HTTPStatus] = 200,
             headers: t.Union[dict, http.client.HTTPMessage] = None
     ):
@@ -66,12 +66,9 @@ class Response:
 
     @classmethod
     def from_http_response(cls, response: http.client.HTTPResponse):
-        def fetching() -> bytes:
-            got = 0
-            while got < response.length:
-                chunk = response.read(1000)
-                got += len(chunk)
-                yield chunk
+        def fetching() -> t.Iterable[bytes]:
+            while response.length > 0:
+                yield response.read(1000)
 
         return cls(
             body=fetching,
