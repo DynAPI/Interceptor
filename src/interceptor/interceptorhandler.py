@@ -19,6 +19,9 @@ TIMEOUT = config.getfloat("target", "timeout")
 
 
 class InterceptorHandler(http.server.BaseHTTPRequestHandler):
+    request: Request = None
+    response: Response = None
+
     def __getattr__(self, item: str):
         if item.startswith("do_"):
             return self._handle_wrapper
@@ -37,6 +40,13 @@ class InterceptorHandler(http.server.BaseHTTPRequestHandler):
                     message=f"{exc}"
                 )
             )
+        finally:
+            for handler in register.TEARDOWN:
+                try:
+                    handler(self.request, self.response)
+                except Exception as exc:
+                    print(f"teardown handler '{handler.__name__}' failed")
+                    traceback.print_exception(type(exc), exc, exc.__traceback__)
 
     def _handle_request(self):
         logging.info(f"Handle Request from {self.client_address[0]}")
@@ -55,11 +65,11 @@ class InterceptorHandler(http.server.BaseHTTPRequestHandler):
         body = self.rfile.read(content_length) if content_length else None
         logging.debug("body:", body and body[:20])
 
-        req = Request(client=self.client_address[0], method=method, path=path, headers=headers, body=body)
+        self.request = request = Request(client=self.client_address[0], method=method, path=path, headers=headers, body=body)
 
         logging.info("running interceptors (before)")
         for interceptor in register.BEFORE:
-            early_response = interceptor(req)
+            early_response = interceptor(request)
             if early_response is not None:
                 logging.info(f"Early Response from {interceptor.__name__}")
                 self._handle_response(early_response)
@@ -79,7 +89,7 @@ class InterceptorHandler(http.server.BaseHTTPRequestHandler):
 
         logging.info("running interceptors (after)")
         for interceptor in register.AFTER:
-            early_response = interceptor(req, response)
+            early_response = interceptor(request, response)
             if early_response is not None:
                 logging.info(f"Early Response from {interceptor.__name__}")
                 self._handle_response(early_response)
@@ -87,14 +97,8 @@ class InterceptorHandler(http.server.BaseHTTPRequestHandler):
 
         self._handle_response(response)
 
-        for handler in register.TEARDOWN:
-            try:
-                handler(req, response)
-            except Exception as exc:
-                print(f"teardown handler '{handler.__name__}' failed")
-                traceback.print_exception(type(exc), exc, exc.__traceback__)
-
     def _handle_response(self, response: Response):
+        self.response = response
         logging.debug("sending response...")
         self.send_response_only(response.status)
         logging.debug("sending headers...")
@@ -103,7 +107,9 @@ class InterceptorHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         logging.debug("sending body...")
         for chunk in response.body:
-            self.wfile.write(chunk)
+            sent = 0
+            while sent < len(chunk):
+                sent += self.wfile.write(chunk[sent:])
         logging.debug("request completed")
 
     def _handle_exception(self, exc: HTTPException):
