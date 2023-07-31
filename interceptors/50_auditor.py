@@ -1,14 +1,15 @@
 #!/usr/bin/python3
 import time
-from queue import Queue as NewQueue
 import atexit
+import logging
 import threading
-import typing as t
 from datetime import datetime
+from queue import Queue as NewQueue
 from pypika import PostgreSQLQuery as Query, Schema, Column
-from interceptors.database import DatabaseConnection
-from src.interceptor.config import config
+import register
+from config import config
 from classes import Request, Response
+from interceptors.database import DatabaseConnection
 
 
 schemaname = config.get('logging', 'schema') if config.has_option('logging', 'schema') else 'interceptor'
@@ -16,18 +17,17 @@ tablename = config.get('logging', 'logging_table') if config.has_option('logging
 
 queue = NewQueue()
 
+
+@register.teardown_request
 def log(request: Request, response: Response):
-    try:
-        log: t.Dict[str, t.Any] = {}
-        log["timestamp"] = datetime.now()
-        log["client"] = request.client
-        log["path"] = request.path
-        log["method"] = request.method
-        log["user"] = request.headers.get("x-user")
-        log["response_code_protected_api"] = response.status
-        queue.put(log)
-    except Exception as exc:
-        print(f"Failed to write log to queue: {type(exc).__name__}: {exc}")
+    queue.put(dict(
+        timestamp=datetime.now(),
+        client=request.client,
+        path=request.path,
+        method=request.method,
+        user=request.headers.get("x-user"),
+        response_code=response.status,
+    ))
 
 
 def create_tables():
@@ -48,6 +48,7 @@ def create_tables():
             .if_not_exists()
         cursor.execute(str(query))
         conn.commit()
+        logging.info(f"Table {schemaname}.{tablename} was created")
 
 
 def log_queue():
@@ -70,17 +71,24 @@ def log_queue():
 
 
 def logger_worker():
-    while app.alive:  # noqa
+    while app_alive:
         try:
             log_queue()
         except Exception as exc:
             print(f"Failed to write log to queue: {type(exc).__name__}: {exc}")
-        for _ in range(15):
-            if not app.alive:  # noqa
+        for _ in range(5):
+            if not app_alive:
                 break
             time.sleep(1)
 
 
+@atexit.register
+def set_dead():
+    global app_alive
+    app_alive = False
+
+
+app_alive = True
 atexit.register(log_queue)
 create_tables()
 worker_thread = threading.Thread(target=logger_worker, name="logging-worker", daemon=True)
