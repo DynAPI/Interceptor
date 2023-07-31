@@ -28,6 +28,7 @@ class Request:
         self.path = path
         self.headers = headers
         self.body = body
+        self._auth_cached = None
 
     def __str__(self):
         return (f"HTTP-Request from {self.client}"
@@ -37,6 +38,8 @@ class Request:
 
     @property
     def authorization(self) -> t.Optional[Authorization]:
+        if self._auth_cached is not None:
+            return self._auth_cached
         header: t.Optional[str] = self.headers.get("Authorization")
         if header is None:
             return None
@@ -50,7 +53,8 @@ class Request:
         username, sep, password = base64.b64decode(b64).decode().partition(":")
         if sep is None:
             raise ValueError("Bad credentials")
-        return Authorization(username=username, password=password)
+        self._auth_cached = Authorization(username=username, password=password)
+        return self._auth_cached
 
 
 class Response:

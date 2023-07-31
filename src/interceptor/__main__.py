@@ -29,7 +29,7 @@ def load_interceptors():
     path = os.path.abspath("interceptors")
     if not os.path.isdir(path):
         return
-    for fn in os.listdir(path):
+    for fn in sorted(os.listdir(path)):
         mn, ext = os.path.splitext(fn)
         if ext != ".py":
             continue

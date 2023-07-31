@@ -3,10 +3,11 @@
 r"""
 
 """
+import sys
 import logging
+import traceback
 import http.server
 import http.client
-import traceback
 
 from config import config
 from classes import Request, Response
@@ -45,7 +46,7 @@ class InterceptorHandler(http.server.BaseHTTPRequestHandler):
                 try:
                     handler(self.request, self.response)
                 except Exception as exc:
-                    print(f"teardown handler '{handler.__name__}' failed")
+                    print(f"teardown handler '{handler.__name__}' failed", file=sys.stderr)
                     traceback.print_exception(type(exc), exc, exc.__traceback__)
 
     def _handle_request(self):
