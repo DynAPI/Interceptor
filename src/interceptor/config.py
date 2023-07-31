@@ -23,7 +23,7 @@ for location in [
     Path(os.getenv("INTERCEPTOR_CONF") or ""),
     Path(main_file).parent / "interceptor.conf",
     Path().cwd() / "interceptor.conf",
-    Path.home() / ".dyninterceptor.conf",
+    Path.home() / ".interceptor.conf",
     Path("/") / "etc" / "dynapi" / "interceptor.conf",
 ]:
     location = location.absolute()

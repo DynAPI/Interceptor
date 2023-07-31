@@ -31,10 +31,10 @@ class InterceptorHandler(http.server.BaseHTTPRequestHandler):
         try:
             self._handle_request()
         except HTTPException as exc:
-            self._handle_exception(exc)
+            self._handle_http_exception(exc)
         except Exception as exc:
             traceback.print_exception(type(exc), exc, exc.__traceback__)
-            self._handle_exception(
+            self._handle_http_exception(
                 HTTPException(
                     status=500,
                     message=f"{exc}"
@@ -65,6 +65,7 @@ class InterceptorHandler(http.server.BaseHTTPRequestHandler):
         body = self.rfile.read(content_length) if content_length else None
         logging.debug("body:", body and body[:20])
 
+        # client_address is localhost if behind neginx or apache2
         self.request = request = Request(client=self.client_address[0], method=method, path=path, headers=headers, body=body)
 
         logging.info("running interceptors (before)")
@@ -112,7 +113,7 @@ class InterceptorHandler(http.server.BaseHTTPRequestHandler):
                 sent += self.wfile.write(chunk[sent:])
         logging.debug("request completed")
 
-    def _handle_exception(self, exc: HTTPException):
+    def _handle_http_exception(self, exc: HTTPException):
         self._handle_response(
             Response.from_http_exception(exc)
         )
