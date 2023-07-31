@@ -54,7 +54,7 @@ def create_tables():
 def log_queue():
     if queue.empty():
         return
-    print(f"insert {queue.qsize()} logs into database")
+    logging.debug(f"insert {queue.qsize()} logs into database")
     with DatabaseConnection() as conn:
         cursor = conn.cursor()
         schema = Schema(schemaname)
