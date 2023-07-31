@@ -1,6 +1,18 @@
 #!/usr/bin/python3
+import hmac
+import base64
+import hashlib
+import logging
 import register
 from classes import Request
+from exceptions import HTTPException, HTTPStatus
+from config import config
+from pypika import Query, Schema, Table, Criterion
+from interceptors.database import DatabaseConnection
+from interceptors.permissions import method_check
+
+schemaname = config.get('auth', 'schema') if config.has_option('auth', 'schema') else 'interceptor'
+tablename = config.get('auth', 'users_table') if config.has_option('auth', 'users_table') else 'users'
 
 
 @register.before_request
