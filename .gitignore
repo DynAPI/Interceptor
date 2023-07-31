@@ -1,6 +1,6 @@
 # Custom
 .idea/
-src/interceptor/interceptors/
+src/interceptor/interceptors
 src/interceptor/interceptor.conf
 
 
