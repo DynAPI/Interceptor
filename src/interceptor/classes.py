@@ -83,14 +83,16 @@ class Response:
     @classmethod
     def from_http_exception(cls, exc: HTTPException):
         import json
+        body = json.dumps(dict(
+            status=exc.status,
+            message=exc.message,
+        )).encode()
         return cls(
-            body=json.dumps(dict(
-                status=exc.status,
-                message=exc.message,
-            )).encode(),
+            body=body,
             status=exc.status,
             headers={
                 "Content-Type": "application/json",
+                "Content-Length": len(body),
                 "Server": "Interceptor",
                 "X-Interceptor": "true",
             }
