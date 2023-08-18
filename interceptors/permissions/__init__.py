@@ -1,7 +1,13 @@
 #!/usr/bin/python3
 # -*- coding=utf-8 -*-
 r"""
+TODO: Fix worth function
+The following config could lead to unexpected behavior
 
+[permissions:/private/*:guest]
+access=False
+[permissions:/private/*/public:guest]
+access=True
 """
 import re
 import functools
@@ -48,6 +54,9 @@ class ParsedSection:
 
     # used for sorting
     def __lt__(self, other: 'ParsedSection'):
+        # see TODO at the top (maybe fixed)
+        if self.worth == other.worth:
+            return len(self.path) < len(other.path)
         return self.worth < other.worth
 
     def match_path(self, path) -> t.Optional[bool]:
