@@ -18,12 +18,20 @@ class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
 
 def configure_logging():
     logging.basicConfig(
+        format="{asctime} | {levelname:.3} | {module:>15}.{funcName:<20} | {lineno:3} | {thread} | {message}",
+        style="{",
         level=(
             getattr(logging, config.get('logging', 'level').upper())
             if config.has_option('logging', 'level')
             else logging.INFO
         ),
-        handlers=[logging.StreamHandler()],
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(
+                filename="interceptor.log",
+                mode='w',  # a
+            )
+        ],
     )
 
 
