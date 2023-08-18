@@ -18,7 +18,11 @@ class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
 
 def configure_logging():
     logging.basicConfig(
-        level=logging.INFO,
+        level=(
+            getattr(logging, config.get('logging', 'level').upper())
+            if config.has_option('logging', 'level')
+            else logging.INFO
+        ),
         handlers=[logging.StreamHandler()],
     )
 
